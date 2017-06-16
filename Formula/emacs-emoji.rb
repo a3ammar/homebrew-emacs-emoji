@@ -1,14 +1,9 @@
 class EmacsEmoji < Formula
   desc "GNU Emacs text editor"
   homepage "https://www.gnu.org/software/emacs/"
-  url "https://ftpmirror.gnu.org/emacs/emacs-25.1.tar.xz"
-  mirror "https://ftp.gnu.org/gnu/emacs/emacs-25.1.tar.xz"
-  sha256 "19f2798ee3bc26c95dca3303e7ab141e7ad65d6ea2b6945eeba4dbea7df48f33"
-
- devel do
-    url "https://alpha.gnu.org/gnu/emacs/pretest/emacs-25.1.91.tar.xz"
-    sha256 "841918b765f9622951348c2209858340262504ff57bb0be293f4f722c3c69533"
-  end
+  url "https://ftp.gnu.org/gnu/emacs/emacs-25.2.tar.xz"
+  mirror "https://ftpmirror.gnu.org/emacs/emacs-25.2.tar.xz"
+  sha256 "59b55194c9979987c5e9f1a1a4ab5406714e80ffcfd415cc6b9222413bc073fa"
 
   head do
     url "https://github.com/emacs-mirror/emacs.git"
