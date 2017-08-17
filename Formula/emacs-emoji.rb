@@ -30,6 +30,14 @@ class EmacsEmoji < Formula
   depends_on "imagemagick" => :optional
   depends_on "mailutils" => :optional
 
+  # Add v-fork patch: https://github.com/d12frosted/homebrew-emacs-plus/blob/f5b2afda62bc9465b3215e8192a581a1b985ad3f/Formula/emacs-plus.rb#L89-L98
+  unless build.head?
+    patch do
+      url "https://gist.githubusercontent.com/aaronjensen/f45894ddf431ecbff78b1bcf533d3e6b/raw/6a5cd7f57341aba673234348d8b0d2e776f86719/Emacs-25-OS-X-use-vfork.patch"
+      sha256 "f2fdbc5adab80f1af01ce120cf33e3b0590d7ae29538999287986beb55ec9ada"
+    end
+  end
+
   patch :DATA
 
   def install
