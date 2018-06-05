@@ -1,15 +1,21 @@
 class EmacsEmoji < Formula
   desc "GNU Emacs text editor"
   homepage "https://www.gnu.org/software/emacs/"
-  url "https://ftp.gnu.org/gnu/emacs/emacs-25.3.tar.xz"
-  mirror "https://ftpmirror.gnu.org/emacs/emacs-25.3.tar.xz"
-  sha256 "253ac5e7075e594549b83fd9ec116a9dc37294d415e2f21f8ee109829307c00b"
+  url "https://ftp.gnu.org/gnu/emacs/emacs-26.1.tar.xz"
+  mirror "https://ftpmirror.gnu.org/emacs/emacs-26.1.tar.xz"
+  sha256 "1cf4fc240cd77c25309d15e18593789c8dbfba5c2b44d8f77c886542300fd32c"
+  revision 1
+
+  bottle do
+    sha256 "f7cb2b2b9b7e519186657ac86929b0e07ab885781f3c0d5e281a4df9beb61b3a" => :high_sierra
+    sha256 "3e517198c33af574942a5d7beb031791825aedc029f98a2dd0ec5d24ba9f7121" => :sierra
+    sha256 "490eb74c1f94db84d77311eb9d3aa6c0c9085e9f971a48e31386488a92799514" => :el_capitan
+  end
 
   head do
     url "https://github.com/emacs-mirror/emacs.git"
 
     depends_on "autoconf" => :build
-    depends_on "automake" => :build
     depends_on "gnu-sed" => :build
     depends_on "texinfo" => :build
   end
@@ -22,23 +28,16 @@ class EmacsEmoji < Formula
   deprecated_option "cocoa" => "with-cocoa"
   deprecated_option "keep-ctags" => "with-ctags"
   deprecated_option "with-d-bus" => "with-dbus"
+  deprecated_option "imagemagick" => "imagemagick@6"
 
   depends_on "pkg-config" => :build
+  depends_on "gnutls"
   depends_on "dbus" => :optional
-  depends_on "gnutls" => :optional
   depends_on "librsvg" => :optional
-  depends_on "imagemagick" => :optional
+  # Emacs does not support ImageMagick 7:
+  # Reported on 2017-03-04: https://debbugs.gnu.org/cgi/bugreport.cgi?bug=25967
+  depends_on "imagemagick@6" => :optional
   depends_on "mailutils" => :optional
-
-  # Add v-fork patch: https://github.com/d12frosted/homebrew-emacs-plus/blob/f5b2afda62bc9465b3215e8192a581a1b985ad3f/Formula/emacs-plus.rb#L89-L98
-  unless build.head?
-    patch do
-      url "https://gist.githubusercontent.com/aaronjensen/f45894ddf431ecbff78b1bcf533d3e6b/raw/6a5cd7f57341aba673234348d8b0d2e776f86719/Emacs-25-OS-X-use-vfork.patch"
-      sha256 "f2fdbc5adab80f1af01ce120cf33e3b0590d7ae29538999287986beb55ec9ada"
-    end
-  end
-
-  patch :DATA
 
   def install
     args = %W[
@@ -47,6 +46,7 @@ class EmacsEmoji < Formula
       --enable-locallisppath=#{HOMEBREW_PREFIX}/share/emacs/site-lisp
       --infodir=#{info}/emacs
       --prefix=#{prefix}
+      --with-gnutls
       --without-x
     ]
 
@@ -62,13 +62,15 @@ class EmacsEmoji < Formula
       args << "--without-dbus"
     end
 
-    if build.with? "gnutls"
-      args << "--with-gnutls"
+    # Note that if ./configure is passed --with-imagemagick but can't find the
+    # library it does not fail but imagemagick support will not be available.
+    # See: https://debbugs.gnu.org/cgi/bugreport.cgi?bug=24455
+    if build.with? "imagemagick@6"
+      args << "--with-imagemagick"
     else
-      args << "--without-gnutls"
+      args << "--without-imagemagick"
     end
 
-    args << "--with-imagemagick" if build.with? "imagemagick"
     args << "--with-modules" if build.with? "modules"
     args << "--with-rsvg" if build.with? "librsvg"
     args << "--without-pop" if build.with? "mailutils"
@@ -93,7 +95,7 @@ class EmacsEmoji < Formula
 
       # Replace the symlink with one that avoids starting Cocoa.
       (bin/"emacs").unlink # Kill the existing symlink
-      (bin/"emacs").write <<-EOS.undent
+      (bin/"emacs").write <<~EOS
         #!/bin/bash
         exec #{prefix}/Emacs.app/Contents/MacOS/Emacs "$@"
       EOS
@@ -108,7 +110,7 @@ class EmacsEmoji < Formula
   end
 
   def caveats
-    if build.with? "cocoa" then <<-EOS.undent
+    if build.with? "cocoa" then <<~EOS
       Please try the Cask for a better-supported Cocoa version:
         brew cask install emacs
       EOS
@@ -117,7 +119,7 @@ class EmacsEmoji < Formula
 
   plist_options :manual => "emacs"
 
-  def plist; <<-EOS.undent
+  def plist; <<~EOS
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
     <plist version="1.0">
@@ -127,7 +129,7 @@ class EmacsEmoji < Formula
       <key>ProgramArguments</key>
       <array>
         <string>#{opt_bin}/emacs</string>
-        <string>--daemon</string>
+        <string>--fg-daemon</string>
       </array>
       <key>RunAtLoad</key>
       <true/>
@@ -147,12 +149,11 @@ index 0445628..1ce0146 100644
 --- a/src/macfont.m
 +++ b/src/macfont.m
 @@ -2375,7 +2375,7 @@ macfont_list (struct frame *f, Lisp_Object spec)
- 
+
            /* Don't use a color bitmap font until it is supported on
- 	     free platforms.  */
+       free platforms.  */
 -          if (sym_traits & kCTFontTraitColorGlyphs)
 +          if ((sym_traits & kCTFontTraitColorGlyphs) && NILP (family))
              continue;
- 
-           if (j > 0
 
+           if (j > 0
